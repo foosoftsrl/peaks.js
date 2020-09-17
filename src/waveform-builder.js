@@ -148,6 +148,212 @@ define([
 
   /* eslint-enable max-len */
 
+  /**
+   * A sort of "virtual" channel in which a possibly very long (ideally) array of samples
+   * is 0 expect on a small range [dataOffset,dataOffset + data.length)
+   */
+  class MyChannel {
+    /**
+     * 
+     * @param {*} samples_per_pixel 
+     * @param {*} refreshCallback a callback called when data has been async loaded
+     */
+    constructor(samples_per_pixel, dataLoader, refreshCallback) {
+      this._samples_per_pixel = samples_per_pixel;
+      this.data = []; // 
+      this.dataOffset = 0; // offset of available data the "virtual" array 
+      this._dataLoader = dataLoader;
+      this._refreshCallback = refreshCallback;
+    }
+    min_sample(index) {
+      this.handleAccessAt(index);
+      if(index < this.dataOffset || index >= this.dataOffset + this.data.length / 2)
+        return 0;
+      else
+        return this.data[(index - this.dataOffset) * 2];
+    }
+    max_sample(index) {
+      this.handleAccessAt(index);
+      if(index < this.dataOffset || index >= this.dataOffset + this.data.length / 2)
+        return 0;
+      else
+        return this.data[(index - this.dataOffset) * 2 + 1];
+    }
+
+
+    handleAccessAt(index) {
+      if(index >= this.dataOffset && index <= this.dataOffset + this.data.length / 2)
+        return;
+      // prepare the array holding the response
+      var from = index - 1000;
+      var to = index + 1000;
+      this.data = new Array((to - from) * 2);
+      this.dataOffset = from;
+      var self = this;
+      // TODO: this URL must be computed by a functor which is passed at construction time
+      // i.e. the options structure used to initialize Peaks must accept
+      // a structure with:
+      // {
+      //   "detailCallback":a_function
+      // }
+      // and a_function will be called a_function(from, to) where from, to are *seconds*
+      var url = this._dataLoader(from * this._samples_per_pixel / 48000, to * this._samples_per_pixel / 48000);
+      if(this.xhr)
+        this.xhr.abort();
+      this.xhr = new XMLHttpRequest();
+      this.xhr.responseType = "json";
+      this.xhr.open('GET', url, true);
+      this.xhr.onload = function(event) {
+        if (this.readyState !== 4) {
+          return;
+        }
+  
+        if (this.status !== 200) {
+          console.log('Unable to fetch remote data. HTTP status ' + this.status)
+          return;
+        }
+  
+        var waveformData = WaveformData.create(event.target.response);
+  
+        if (waveformData.channels !== 1 && waveformData.channels !== 2) {
+          console.log('Peaks.init(): Only mono or stereo waveforms are currently supported');
+          return;
+        }
+        var resampled = waveformData.resample({
+          "scale":self._samples_per_pixel
+        });
+        var channel = resampled.channel(0);
+        var numSamplesToCopy = Math.min(to - from, waveformData.length);
+        for(var dataIdx = 0; dataIdx < numSamplesToCopy; dataIdx++) {
+          self.data[dataIdx * 2] = channel.min_sample(dataIdx);
+          self.data[dataIdx * 2 + 1] = channel.max_sample(dataIdx);
+        }
+        if(self._refreshCallback) {
+          self._refreshCallback();
+        }
+      }
+      this.xhr.send();
+    }
+  }
+
+  class DynamicLoadWaveForm {
+    constructor(waveformData, length, dataLoader, refreshCallback) {
+      // duration = length * samples_per_pixel / sample_rate;
+      this._waveformData = waveformData;
+      this._length = length;
+      this._samples_per_pixel = waveformData.scale * waveformData.length / length;
+      this._channel = new MyChannel(this._samples_per_pixel, dataLoader, refreshCallback);
+      this._refreshCallback = refreshCallback;
+    }
+    
+    /**
+     * Returns the number of samples per second.
+     *
+     * @return {Integer} Number of samples per second.
+     */
+
+    get sample_rate() {
+      return this._waveformData.sample_rate;
+    }
+
+    /**
+     * Returns the length of the waveform data (number of data points).
+     *
+     * @return {Integer} Length of the waveform data.
+     */
+    get length() {
+      return this._length;
+    }
+    /**
+    * Returns the scale (number of samples per pixel).
+    *
+    * @return {Integer} Number of samples per pixel.
+    */
+    get scale() {
+      return this._samples_per_pixel;
+    }
+
+    /**
+     * Returns the number of channels
+     *
+     * @return {Integer} Number of channels
+     */
+    get channels() {
+      return this._waveformData.channels;
+    }
+
+    channel(index) {
+      if(index != 0)
+        throw "Invalid channel";
+      return this._channel;
+    }
+
+    resample(args) {
+      throw "A resampled waveform can't be resampled";
+    }
+  }
+
+  class WaveformWrapper {
+    constructor(response, dataLoader) {
+      this.waveformData = WaveformData.create(response);
+      this._dataLoader = dataLoader;
+    }
+
+    /**
+     * Returns the number of samples per second.
+     *
+     * @return {Integer} Number of samples per second.
+     */
+
+    get sample_rate() {
+      return this.waveformData.sample_rate;
+    }
+
+    /**
+     * Returns the length of the waveform data (number of data points).
+     *
+     * @return {Integer} Length of the waveform data.
+     */
+    get length() {
+      return this.waveformData.length;
+    }
+    /**
+    * Returns the scale (number of samples per pixel).
+    *
+    * @return {Integer} Number of samples per pixel.
+    */
+    get scale() {
+      return this.waveformData.scale;
+    }
+
+    /**
+     * Returns the number of channels
+     *
+     * @return {Integer} Number of channels
+     */
+    get channels() {
+      return this.waveformData.channels;
+    }
+
+    channel(index) {
+      return this.waveformData.channel(index);
+    }
+
+    resample(args, callback) {
+      var length;
+      if(args.scale) {
+        length = this.waveformData.duration * this.waveformData.sample_rate / args.scale
+      } else {
+        length = args.width;
+      }
+      if(length > this.waveformData.length) {
+        return new DynamicLoadWaveForm(this, length, this._dataLoader, callback);
+      } else {
+        return this.waveformData.resample(args);
+      }
+    }
+  }
+
   WaveformBuilder.prototype._getRemoteWaveformData = function(options, callback) {
     var self = this;
     var dataUri = null;
@@ -195,8 +401,7 @@ define([
         return;
       }
 
-      var waveformData = WaveformData.create(event.target.response);
-
+      var waveformData = new WaveformWrapper(event.target.response, options.detailUriProvider);
       if (waveformData.channels !== 1 && waveformData.channels !== 2) {
         callback(new Error('Peaks.init(): Only mono or stereo waveforms are currently supported'));
         return;

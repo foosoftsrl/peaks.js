@@ -219,7 +219,9 @@ define([
 
         self._resizeTimeoutId = setTimeout(function() {
           self._width = width;
-          self._data = self._originalWaveformData.resample(width);
+          self._data = self._originalWaveformData.resample(width, () => {
+            self._updateWaveform(self._frameOffset);
+          });
           self._stage.width(width);
 
           self._updateWaveform(self._frameOffset);
@@ -334,11 +336,12 @@ define([
       this._zoomLevelAuto = false;
     }
 
-    if (scale < this._originalWaveformData.scale) {
-      // eslint-disable-next-line max-len
-      this._peaks.logger('peaks.zoomview.setZoom(): zoom level must be at least ' + this._originalWaveformData.scale);
-      scale = this._originalWaveformData.scale;
-    }
+//    This sanity check makes no sense for dynamic load
+//    if (scale < this._originalWaveformData.scale) {
+//      // eslint-disable-next-line max-len
+//      this._peaks.logger('peaks.zoomview.setZoom(): zoom level must be at least ' + this._originalWaveformData.scale);
+//      scale = this._originalWaveformData.scale;
+//    }
 
     var currentTime = this._peaks.player.getCurrentTime();
     var apexTime;
@@ -381,7 +384,9 @@ define([
   };
 
   WaveformZoomView.prototype._resampleData = function(options) {
-    this._data = this._originalWaveformData.resample(options);
+    this._data = this._originalWaveformData.resample(options, () => {
+      this._updateWaveform(this._frameOffset);
+    });
     this._scale = this._data.scale;
     this._pixelLength = this._data.length;
   };
