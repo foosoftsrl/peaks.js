@@ -158,7 +158,8 @@ define([
      * @param {*} samples_per_pixel 
      * @param {*} refreshCallback a callback called when data has been async loaded
      */
-    constructor(samples_per_pixel, dataLoader, refreshCallback) {
+    constructor(originalWaveform, samples_per_pixel, dataLoader, refreshCallback) {
+      this._originalWaveform = originalWaveform;
       this._samples_per_pixel = samples_per_pixel;
       this.data = []; // 
       this.dataOffset = 0; // offset of available data the "virtual" array 
@@ -180,6 +181,9 @@ define([
         return this.data[(index - this.dataOffset) * 2 + 1];
     }
 
+    in_range(index) {
+      return index >= this.dataOffset && index < this.dataOffset + this.data.length / 2;
+    }
 
     handleAccessAt(index) {
       if(index >= this.dataOffset && index <= this.dataOffset + this.data.length / 2)
@@ -187,7 +191,23 @@ define([
       // prepare the array holding the response
       var from = index - 1000;
       var to = index + 1000;
-      this.data = new Array((to - from) * 2);
+      var newData = new Array((to - from) * 2); // size of array is 2 (min,max) * number of points
+
+      // Copy available data from what is currently loaded
+      var orgChannel = this._originalWaveform.channel(0);
+      for(var i = from; i < to; i++) {
+        if(this.in_range(i)) {
+          newData[(i - from) * 2] = this.data[(i - this.dataOffset) * 2];
+          newData[(i - from) * 2 + 1] = this.data[(i - this.dataOffset) * 2 + 1];
+        } else {
+          var sampleIdxInOriginalWave = i * this._samples_per_pixel / this._originalWaveform.scale;
+          if(sampleIdxInOriginalWave >= 0 && sampleIdxInOriginalWave < this._originalWaveform.length) {
+            newData[(i - from) * 2] = orgChannel.min_sample(i * this._samples_per_pixel / this._originalWaveform.scale);
+            newData[(i - from) * 2 + 1] = orgChannel.max_sample[i * this._samples_per_pixel / this._originalWaveform.scale];
+          }
+        }
+      }
+      this.data = newData;
       this.dataOffset = from;
       var self = this;
       // TODO: this URL must be computed by a functor which is passed at construction time
@@ -242,7 +262,7 @@ define([
       this._waveformData = waveformData;
       this._length = length;
       this._samples_per_pixel = waveformData.scale * waveformData.length / length;
-      this._channel = new MyChannel(this._samples_per_pixel, dataLoader, refreshCallback);
+      this._channel = new MyChannel(waveformData, this._samples_per_pixel, dataLoader, refreshCallback);
       this._refreshCallback = refreshCallback;
     }
     
