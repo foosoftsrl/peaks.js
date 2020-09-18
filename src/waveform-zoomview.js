@@ -336,12 +336,11 @@ define([
       this._zoomLevelAuto = false;
     }
 
-//    This sanity check makes no sense for dynamic load
-//    if (scale < this._originalWaveformData.scale) {
-//      // eslint-disable-next-line max-len
-//      this._peaks.logger('peaks.zoomview.setZoom(): zoom level must be at least ' + this._originalWaveformData.scale);
-//      scale = this._originalWaveformData.scale;
-//    }
+    //    This sanity check makes no sense for dynamic load
+    if (!this._originalWaveformData.dynamic && scale < this._originalWaveformData.scale) {
+      this._peaks.logger('peaks.zoomview.setZoom(): zoom level must be at least ' + this._originalWaveformData.scale);
+      scale = this._originalWaveformData.scale;
+    }
 
     var currentTime = this._peaks.player.getCurrentTime();
     var apexTime;
