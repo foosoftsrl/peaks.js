@@ -200,9 +200,12 @@ define([
     ensureIndexAvailable(index) {
       if(index >= this.dataOffset && index <= this.dataOffset + this.data.length / 2)
         return;
-      // prepare the array holding the response
-      var from = index - 1000;
-      var to = index + 1000;
+      // The reasoning here is that, at this instant, how large is the player window:
+      // so assume that is not longer than n pixel and take double the witdh because the
+      // time marker could be at the beginning or end of the window
+      const maxWindowSize = 2000;
+      var from = index - maxWindowSize;
+      var to = index + maxWindowSize;
       var newData = new Array((to - from) * 2); // size of array is 2 (min,max) * number of points
 
       // Copy available data from what was previously loaded, or from the original waveform
