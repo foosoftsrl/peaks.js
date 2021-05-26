@@ -12,6 +12,7 @@ define([
   './points-layer',
   './segments-layer',
   './waveform-axis',
+  './waveform-ordinate-axis',
   './waveform-shape',
   // './animated-zoom-adapter',
   // './static-zoom-adapter',
@@ -23,6 +24,7 @@ define([
     PointsLayer,
     SegmentsLayer,
     WaveformAxis,
+    WaveformOrdinateAxis,
     WaveformShape,
     // AnimatedZoomAdapter,
     // StaticZoomAdapter,
@@ -70,6 +72,8 @@ define([
 
     self._enableAutoScroll = true;
     self._amplitudeScale = 1.0;
+    self._isDbScale = true;
+
     self._timeLabelPrecision = peaks.options.timeLabelPrecision;
 
     self._options = peaks.options;
@@ -108,6 +112,7 @@ define([
     self._pointsLayer.addToStage(self._stage);
 
     self._createAxisLabels();
+    self._createOrdinateAxisLabels();
 
     self._playheadLayer = new PlayheadLayer(
       peaks,
@@ -503,6 +508,24 @@ define([
   };
 
   /**
+   * @returns {boolean} whether the ordinate scale is db or linear
+   *
+   */
+  WaveformZoomView.prototype.getIsDbScale = function() {
+    return this._isDbScale;
+  };
+
+  /**
+   * Set the ordinate scale to db / linear
+   * @param {boolean} true for db scale, false for linear
+   */
+  WaveformZoomView.prototype.setDbScale = function(dbScale) {
+    this._isDbScale = dbScale;
+
+    this._updateWaveform(this._frameOffset);
+  };
+
+  /**
    * @returns {WaveformData} The view's waveform data.
    */
 
@@ -534,6 +557,17 @@ define([
     this._stage.add(this._axisLayer);
   };
 
+  WaveformZoomView.prototype._createOrdinateAxisLabels = function() {
+    this._ordinateAxisLayer = new Konva.FastLayer();
+
+    this._ordinateAxis = new WaveformOrdinateAxis(this, {
+      axisGridlineColor: this._options.axisGridlineColor,
+      axisLabelColor:    this._options.axisLabelColor
+    })
+
+    this._ordinateAxis.addToLayer(this._ordinateAxisLayer);
+    this._stage.add(this._ordinateAxisLayer);
+  }
   /**
    * Updates the region of waveform shown in the view.
    *
@@ -564,6 +598,7 @@ define([
 
     this._waveformLayer.draw();
     this._axisLayer.draw();
+    this._ordinateAxisLayer.draw();
 
     var frameStartTime = this.pixelsToTime(this._frameOffset);
     var frameEndTime   = this.pixelsToTime(this._frameOffset + this._width);

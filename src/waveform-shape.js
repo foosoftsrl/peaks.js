@@ -10,24 +10,6 @@ define(['./utils', 'konva'], function(Utils, Konva) {
   'use strict';
 
   /**
-   * Scales the waveform data for drawing on a canvas context.
-   *
-   * @param {Number} amplitude The waveform data point amplitude.
-   * @param {Number} height The height of the waveform, in pixels.
-   * @param {Number} scale Amplitude scaling factor.
-   * @returns {Number} The scaled waveform data point.
-   */
-
-  function scaleY(amplitude, height, scale) {
-    var range = 256;
-    var offset = 128;
-
-    var scaledAmplitude = (amplitude * scale + offset) * height / range;
-
-    return height - Utils.clamp(height - scaledAmplitude, 0, height);
-  }
-
-  /**
    * Waveform shape options.
    *
    * @typedef {Object} WaveformShapeOptions
@@ -58,7 +40,6 @@ define(['./utils', 'konva'], function(Utils, Konva) {
     this._segment = options.segment;
 
     this.sceneFunc(this._sceneFunc);
-
     this.hitFunc(this._waveformShapeHitFunc);
   }
 
@@ -150,13 +131,13 @@ define(['./utils', 'konva'], function(Utils, Konva) {
     for (x = startPixels; x < endPixels; x++) {
       val = channel.min_sample(x);
 
-      context.lineTo(x - frameOffset + 0.5, top + scaleY(val, height, amplitudeScale) + 0.5);
+      context.lineTo(x - frameOffset + 0.5, top + this.scaleY(val, height, amplitudeScale) + 0.5);
     }
 
     for (x = endPixels - 1; x >= startPixels; x--) {
       val = channel.max_sample(x);
 
-      context.lineTo(x - frameOffset + 0.5, top + scaleY(val, height, amplitudeScale) + 0.5);
+      context.lineTo(x - frameOffset + 0.5, top + this.scaleY(val, height, amplitudeScale) + 0.5);
     }
 
     context.closePath();
@@ -199,6 +180,41 @@ define(['./utils', 'konva'], function(Utils, Konva) {
     context.rect(hitRectLeft, offsetY, hitRectWidth, hitRectHeight);
     context.closePath();
     context.fillStrokeShape(this);
+  };
+
+  /**
+   * Scales the waveform data for drawing on a canvas context.
+   *
+   * @param {Number} amplitude The waveform data point amplitude.
+   * @param {Number} height The height of the waveform, in pixels.
+   * @param {Number} scale Amplitude scaling factor.
+   * @returns {Number} The scaled waveform data point.
+   */
+  WaveformShape.prototype.scaleY = function(amplitude, height, scale) {
+    var range = 256;
+    var offset = 128;
+
+    /** @type {number} */
+    var scaledAmplitude;
+
+    if (this._view.getIsDbScale()) {
+      // Logarithmic dBFS (truncate tomaxium 60 db)
+      var dBFS = Utils.clamp(20 * Math.log10(Math.abs(amplitude) / offset), -60, 0);
+
+      // dBFS is always a negative value
+      scaledAmplitude = -dBFS * scale * height / 120;
+
+      if (Math.sign(amplitude) > 0) {
+        return Utils.clamp(scaledAmplitude, 0, height);
+      }
+
+      return Utils.clamp(height - scaledAmplitude, 0, height);
+    }
+
+    // Linear scale
+    scaledAmplitude = (amplitude * scale + offset) * height / range;
+
+    return height - Utils.clamp(height - scaledAmplitude, 0, height);
   };
 
   return WaveformShape;

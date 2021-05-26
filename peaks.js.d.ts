@@ -299,6 +299,8 @@ declare module 'peaks.js' {
     fitToContainer: () => void;
     setZoom: (options: XOR<{ scale: number | 'auto' }, { seconds: number | 'auto' }>) => void;
     setStartTime: (time: number) => void;
+    getIsScaleDb: () => boolean;
+    setScaleDb: (scaleDb: boolean) => void;
   }
 
   type Without<T> = { [K in keyof T]?: undefined };

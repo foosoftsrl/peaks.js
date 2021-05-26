@@ -61,6 +61,8 @@ define([
     peaks.on('window_resize', self._onWindowResize);
 
     self._amplitudeScale = 1.0;
+    self._isDbScale = true;
+
     self._timeLabelPrecision = peaks.options.timeLabelPrecision;
 
     self._options = peaks.options;
@@ -303,6 +305,24 @@ define([
 
   WaveformOverview.prototype.getAmplitudeScale = function() {
     return this._amplitudeScale;
+  };
+
+  /**
+   * @returns {boolean} whether the ordinate scale is db or linear
+   *
+   */
+  WaveformOverview.prototype.getIsDbScale = function() {
+    return this._isDbScale;
+  };
+
+  /**
+   * Set the ordinate scale to db / linear
+   * @param {boolean} true for db scale, false for linear
+   */
+  WaveformOverview.prototype.setDbScale = function(dbScale) {
+    this._isDbScale = dbScale;
+
+    this._updateWaveform(this._frameOffset);
   };
 
   /**

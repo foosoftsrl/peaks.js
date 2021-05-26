@@ -29,6 +29,7 @@ define([
     this._peaks = peaks;
     this._overview = null;
     this._zoomview = null;
+    this._isOrdinateScaleDb = true;
   }
 
   ViewController.prototype.createOverview = function(container) {

@@ -247,7 +247,7 @@ define([
           return;
         }
         var resampled = waveformData.resample({
-          "scale":this._samples_per_pixel
+          "scale": this._samples_per_pixel
         });
         var channel = resampled.channel(0);
         var numSamplesToCopy = Math.min(to - from, waveformData.length);
