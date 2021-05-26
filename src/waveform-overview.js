@@ -466,5 +466,9 @@ define([
     }
   };
 
+  WaveformOverview.prototype.getPadding = function() {
+    return 0;
+  };
+
   return WaveformOverview;
 });

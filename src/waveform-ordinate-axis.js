@@ -157,19 +157,16 @@ define([
 
     var width  = view.getWidth();
     var height = view.getHeight();
-    // TODO add some vertical margin to avoid drawing above / below the x axis
-    // TODO check out how difficult it would be to avoid drawing above the graph
-    // Apply some margin to avoid drawing abose/below the x axis
-    // margin = 2 * markerHeight (10) + xLabel (11px) + 2 * yLabel / 2 (5.5) * buffer (3px) = 45;
-    var margin = 0;
-    var axisHeight = height - margin;
     var nIntervals = this._getNIntervals(view.getIsDbScale());
 
-    var dy = axisHeight / nIntervals;
+    var padding = view.getPadding();
+    var paintableHeight = height - padding;
+    var dy = paintableHeight / nIntervals;
+    /** @type {number} */
     var y;
 
     for (var i = 0; i < nIntervals + 1; i++) {
-      y = margin / 2 + i * dy;
+      y = padding / 2 + i * dy;
       // Draw marker
       // In the x axis the marker is offset from the x position by 0.5, not sure
       // why though...
@@ -187,13 +184,13 @@ define([
       // label center
       var textBaseline = 'middle';
 
-      if (i === 0) {
-        textBaseline = 'top';
-      }
+      //if (i === 0) {
+      //  textBaseline = 'top';
+      //}
 
-      if (i === nIntervals) {
-        textBaseline = 'bottom';
-      }
+      //if (i === nIntervals) {
+      //  textBaseline = 'bottom';
+      //}
 
       context.setAttr('textBaseline', textBaseline);
 

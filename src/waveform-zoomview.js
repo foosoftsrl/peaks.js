@@ -737,5 +737,13 @@ define([
     }
   };
 
+  /**
+   * The idea here is to define som vertical padding to avoid drawing the vertical
+   * axis and waveform above / below the ordinate axis
+   */
+  WaveformZoomView.prototype.getPadding = function() {
+    return 60;
+  }
+
   return WaveformZoomView;
 });

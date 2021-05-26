@@ -194,6 +194,9 @@ define(['./utils', 'konva'], function(Utils, Konva) {
     var range = 256;
     var offset = 128;
 
+    var padding = this._view.getPadding();
+    var paintableHeight = height - padding;
+
     /** @type {number} */
     var scaledAmplitude;
 
@@ -202,19 +205,20 @@ define(['./utils', 'konva'], function(Utils, Konva) {
       var dBFS = Utils.clamp(20 * Math.log10(Math.abs(amplitude) / offset), -60, 0);
 
       // dBFS is always a negative value
-      scaledAmplitude = -dBFS * scale * height / 120;
+      scaledAmplitude = -dBFS * scale * paintableHeight / 120 + padding / 2;
 
       if (Math.sign(amplitude) > 0) {
-        return Utils.clamp(scaledAmplitude, 0, height);
+        return Utils.clamp(scaledAmplitude, 0, paintableHeight);
       }
 
-      return Utils.clamp(height - scaledAmplitude, 0, height);
+      return Utils.clamp(height - scaledAmplitude, 0, paintableHeight);
     }
 
     // Linear scale
-    scaledAmplitude = (amplitude * scale + offset) * height / range;
+    scaledAmplitude = (amplitude * scale + offset) * paintableHeight / range + padding / 2;
 
-    return height - Utils.clamp(height - scaledAmplitude, 0, height);
+    return paintableHeight -
+      Utils.clamp(paintableHeight - scaledAmplitude, 0, paintableHeight);
   };
 
   return WaveformShape;
