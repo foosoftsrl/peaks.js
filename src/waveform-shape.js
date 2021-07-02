@@ -205,7 +205,7 @@ define(['./utils', 'konva'], function(Utils, Konva) {
       var dBFS = Utils.clamp(20 * Math.log10(Math.abs(amplitude) / offset), -60, 0);
 
       // dBFS is always a negative value
-      scaledAmplitude = -dBFS * scale * paintableHeight / 120 + padding / 2;
+      scaledAmplitude = -dBFS * paintableHeight / 120 / scale + padding / 2;
 
       if (Math.sign(amplitude) > 0) {
         return Utils.clamp(scaledAmplitude, 0, paintableHeight);
